@@ -1,0 +1,16 @@
+[package]
+name = "fast-livo2"
+version = "0.1.0"
+edition = "2024"
+resolver = "3"
+
+[dependencies]
+futures-lite = "2.6"
+kornia = "0.1.9"
+log = "0.4"
+museair = "0.4"
+nalgebra = "0.34"
+num-traits = "0.2"
+thiserror = "2.0"
+
+[features]
