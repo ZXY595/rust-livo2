@@ -3,6 +3,7 @@ use std::iter::Sum;
 use nalgebra::{Matrix3, Point3, Vector3};
 
 pub mod jacobian;
+pub mod space;
 
 #[derive(Default)]
 pub struct PointCovSum {
@@ -12,7 +13,10 @@ pub struct PointCovSum {
 }
 
 impl<'a> Sum<&'a Point3<f64>> for PointCovSum {
-    fn sum<I: Iterator<Item = &'a Point3<f64>>>(iter: I) -> Self {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = &'a Point3<f64>>,
+    {
         iter.fold(Self::default(), |mut acc, current| {
             let current = current.coords;
             acc.num += 1;

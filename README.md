@@ -1,10 +1,9 @@
 # rust-livo2
-[WIP] Rust implement of FAST_LIVO2.
 > [!DANGER]
 > Don't use this library for now, it's still in deep development.
 
 # Overview
-> [!WARNING] [WIP] Rust implement of FAST_LIVO2.
+>[!WARNING] [WIP] Rust implement of FAST_LIVO2.
 
 # Features
 ## 1. Eazy to use
@@ -20,11 +19,11 @@ which completely wrecks modern compiler optimizations.
 - [x] Basic error propagate (jocobian) framework 
 - [x] Point error propagate
 - [x] Plane error propagate
-- [] Voxel map and octree implement
-- [] imu implement
-- [] esikf state estimator implement
-- [] vio implement
-- [] ...
+- [ ] Voxel map and octree implement
+- [ ] imu implement
+- [ ] esikf state estimator implement
+- [ ] vio implement
+- [ ] ...
 
 # Get Started
 ## Clone the repository

@@ -1,6 +1,10 @@
-use nalgebra::Vector3;
+use nalgebra::{IsometryMatrix3, Vector3};
 
 use crate::esikf;
+
+pub struct Config {
+    pub body_to_imu: IsometryMatrix3<f64>,
+}
 
 pub struct State {
     /// estimated velocity, from imu frame to world frame

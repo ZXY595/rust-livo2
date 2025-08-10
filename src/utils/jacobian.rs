@@ -1,18 +1,36 @@
 use std::{
+    borrow::Borrow,
     iter::Sum,
-    ops::{Add, AddAssign, Deref},
+    ops::{Add, Deref},
 };
 
-use nalgebra::{ClosedAddAssign, ClosedMulAssign, SMatrix, Scalar};
+use nalgebra::{
+    ArrayStorage, ClosedAddAssign, ClosedMulAssign, Const, IsContiguous, Matrix, RawStorage,
+    SMatrix, Scalar, Storage, U1, U3, ViewStorage,
+};
 use num_traits::{One, Zero};
 
 pub type Covariance1<T> = Covariance<T, 1>;
 pub type Covariance2<T> = Covariance<T, 2>;
 pub type Covariance3<T> = Covariance<T, 3>;
 pub type Covariance6<T> = Covariance<T, 6>;
+pub type Covariance3View<'a, T, const R: usize, const C: usize> =
+    Covariance<T, 3, ViewStorage<'a, T, U3, U3, Const<R>, Const<C>>>;
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Covariance<T, const D: usize>(pub SMatrix<T, D, D>);
+#[derive(Debug, Clone)]
+pub struct Covariance<T, const D: usize, S = ArrayStorage<T, D, D>>(
+    pub Matrix<T, Const<D>, Const<D>, S>,
+);
+
+impl<T, S> Covariance<T, 1, S>
+where
+    T: Scalar + Clone,
+    S: RawStorage<T, U1, U1> + IsContiguous,
+{
+    pub fn inner(&self) -> T {
+        self.0.x.clone()
+    }
+}
 
 impl<T, const D: usize> Covariance<T, D>
 where
@@ -23,45 +41,50 @@ where
     }
 }
 
-impl<T, const D: usize> Deref for Covariance<T, D> {
-    type Target = SMatrix<T, D, D>;
+impl<T, const D: usize, S> Deref for Covariance<T, D, S> {
+    type Target = Matrix<T, Const<D>, Const<D>, S>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl<T, const D: usize> Covariance<T, D>
+impl<T, const D: usize, S> Covariance<T, D, S>
 where
     T: Scalar + Zero + One + ClosedAddAssign + ClosedMulAssign,
+    S: Storage<T, Const<D>, Const<D>>,
 {
-    pub fn propagate_error<const R: usize>(&self, error: &SMatrix<T, R, D>) -> Covariance<T, R> {
+    #[inline]
+    pub fn propagate_error<const R: usize>(
+        &self,
+        error: impl Borrow<SMatrix<T, R, D>>,
+    ) -> Covariance<T, R> {
+        let error: &SMatrix<T, R, D> = error.borrow();
         Covariance(error * &self.0 * error.transpose())
     }
-}
 
-impl<T, const D: usize> Add for Covariance<T, D>
-where
-    T: Scalar + ClosedAddAssign,
-{
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        Self(self.0 + rhs.0)
+    #[inline]
+    pub fn project_on(&self, error: impl Borrow<SMatrix<T, D, 1>>) -> T {
+        let error: &SMatrix<T, D, 1> = error.borrow();
+        (error.transpose() * &self.0 * error).x.clone()
     }
 }
 
-// impl<T, const D: usize> AddAssign<SMatrix<T, D, D>> for Covariance<T, D>
-// where
-//     T: Scalar + ClosedAddAssign,
-// {
-//     fn add_assign(&mut self, rhs: SMatrix<T, D, D>) {
-//         self.0 += rhs;
-//     }
-// }
+impl<T, const D: usize, S1, S2> Add<Covariance<T, D, S2>> for Covariance<T, D, S1>
+where
+    T: Scalar + ClosedAddAssign,
+    S1: Storage<T, Const<D>, Const<D>>,
+    S2: Storage<T, Const<D>, Const<D>>,
+{
+    type Output = Covariance<T, D, ArrayStorage<T, D, D>>;
 
-impl<T, const D: usize> From<SMatrix<T, D, D>> for Covariance<T, D> {
-    fn from(value: SMatrix<T, D, D>) -> Self {
+    fn add(self, rhs: Covariance<T, D, S2>) -> Self::Output {
+        Covariance::from(self.0 + rhs.0)
+    }
+}
+
+impl<T, const D: usize, S> From<Matrix<T, Const<D>, Const<D>, S>> for Covariance<T, D, S> {
+    fn from(value: Matrix<T, Const<D>, Const<D>, S>) -> Self {
         Self(value)
     }
 }
