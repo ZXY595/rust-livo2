@@ -12,5 +12,6 @@ museair = "0.4"
 nalgebra = "0.34"
 num-traits = "0.2"
 thiserror = "2.0"
+fnerror = "0.1.2"
 
 [features]

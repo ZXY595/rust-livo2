@@ -2,8 +2,8 @@ use std::iter::Sum;
 
 use nalgebra::{Matrix3, Point3, Vector3};
 
-pub mod jacobian;
-pub mod space;
+pub mod uncertain;
+pub mod frame;
 
 #[derive(Default)]
 pub struct PointCovSum {
