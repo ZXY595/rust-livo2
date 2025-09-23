@@ -9,7 +9,7 @@ use museair::HashMap;
 
 use nalgebra::DVector;
 
-use crate::utils::frame::{World, WorldPoint};
+use crate::frame::{World, WorldPoint};
 
 pub struct Config {
     beam_err: f64,

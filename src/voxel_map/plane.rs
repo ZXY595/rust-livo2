@@ -1,35 +1,45 @@
 use super::Config;
 use crate::{
-    utils::{
-        PointCovSum,
-        frame::{World, WorldPoint},
-        uncertain::Uncertainty6,
-    },
+    frame::{World, WorldPoint},
+    uncertain::{UncertainForward, Uncertainty3},
+    utils::VectorSquareSum,
     voxel_map::point::UncertainPoint,
 };
-use nalgebra::{DVector, Matrix3, RowVector3, SymmetricEigen, Vector3, stack};
+use nalgebra::{DVector, Matrix3, Matrix6, RowVector3, SymmetricEigen, Vector3, stack};
+use rust_livo2_macros::uncertainties;
 use std::ops::Deref;
 
 pub struct UncertainPlane {
     normal: Vector3<f64>,
     center: WorldPoint<f64>,
-    covariance: Uncertainty6<f64>,
-    point_num: usize,
+    points_count: usize,
     radius: f64,
     distance_to_origin: f64,
+    covariance: PlaneUncertainties,
     // eigenvalues: Vector3<f64>,
     // eigenvectors: Matrix3<f64>,
 }
 
+#[uncertainties]
+#[derive(Debug)]
+pub struct PlaneUncertainties {
+    normal: NormalUncertainty,
+    center: CenterUncertainty,
+}
+
+type NormalUncertainty = Uncertainty3<f64>;
+type CenterUncertainty = Uncertainty3<f64>;
+
 impl UncertainPlane {
     pub fn new(plane_points: &DVector<UncertainPoint<World>>, config: &Config) -> Option<Self> {
-        let points_sum = plane_points
+        let sum = plane_points
             .iter()
             .map(UncertainPoint::point)
-            .sum::<PointCovSum>();
-        let point_num = points_sum.num as f64;
-        let center = points_sum.mean / point_num;
-        let covariance = points_sum.covariance / point_num - center * center.transpose();
+            .map(|point| &point.coords)
+            .sum::<VectorSquareSum>();
+
+        let points_count = sum.count();
+        let (center, covariance) = sum.mean();
 
         let SymmetricEigen {
             eigenvectors,
@@ -42,9 +52,11 @@ impl UncertainPlane {
             return None;
         }
 
-        let covariance = plane_points
+        let covariance_matrix = plane_points
             .iter()
             .map(|uncertain_point| {
+                let points_count = points_count as f64;
+
                 let rows: [RowVector3<f64>; 3] = std::array::from_fn(|i| {
                     if i == min_eigen_index {
                         return RowVector3::zeros();
@@ -53,19 +65,19 @@ impl UncertainPlane {
                     let min_eigenvector = eigenvectors.column(min_eigen_index);
 
                     (uncertain_point.point.deref() - center).coords.transpose()
-                        / (point_num * (min_eigen_value - eigenvalues[i]))
+                        / (points_count * (min_eigen_value - eigenvalues[i]))
                         * (i_eigenvector * min_eigenvector.transpose()
                             + min_eigenvector * i_eigenvector.transpose())
                 });
                 let normal_error = eigenvectors * Matrix3::from_rows(&rows);
-                let position_error = Matrix3::from_diagonal_element(point_num.recip());
+                let position_error = Matrix3::from_diagonal_element(points_count.recip());
 
                 #[expect(clippy::toplevel_ref_arg)]
                 let error_matrix = stack![normal_error; position_error];
 
                 uncertain_point.covariance.forward(error_matrix)
             })
-            .sum::<Uncertainty6<f64>>();
+            .sum::<Matrix6<f64>>();
 
         let normal = eigenvectors.column(min_eigen_index);
 
@@ -74,8 +86,8 @@ impl UncertainPlane {
         Some(Self {
             normal: normal.into(),
             center: center.into(),
-            covariance,
-            point_num: points_sum.num,
+            covariance: covariance_matrix.into(),
+            points_count,
             radius: eigenvalues.max().sqrt(),
             distance_to_origin,
             // eigenvectors,
@@ -89,7 +101,9 @@ impl UncertainPlane {
         #[expect(clippy::toplevel_ref_arg)]
         let error_matrix = stack![distance_error; normal_error];
 
-        self.covariance.back(error_matrix) + world_point.covariance.back(self.normal)
+        let sigma =
+            self.covariance.backward(error_matrix) + world_point.covariance.backward(&self.normal);
+        sigma.to_scalar()
     }
 
     pub fn distance_to(&self, world_point: WorldPoint<f64>) -> f64 {

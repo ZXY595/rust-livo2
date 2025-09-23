@@ -1,27 +1,34 @@
 use std::iter::Sum;
 
-use nalgebra::{Matrix3, Point3, Vector3};
-
-pub mod uncertain;
-pub mod frame;
+use nalgebra::{Matrix3, Vector3};
 
 #[derive(Default)]
-pub struct PointCovSum {
-    pub num: usize,
-    pub mean: Vector3<f64>,
-    pub covariance: Matrix3<f64>,
+pub struct VectorSquareSum {
+    count: usize,
+    sum: Vector3<f64>,
+    square_sum: Matrix3<f64>,
 }
 
-impl<'a> Sum<&'a Point3<f64>> for PointCovSum {
+impl VectorSquareSum {
+    pub fn mean(&self) -> (Vector3<f64>, Matrix3<f64>) {
+        let count = self.count as f64;
+        let mean = self.sum / count;
+        (mean, self.square_sum / count - mean * mean.transpose())
+    }
+    pub fn count(&self) -> usize {
+        self.count
+    }
+}
+
+impl<'a> Sum<&'a Vector3<f64>> for VectorSquareSum {
     fn sum<I>(iter: I) -> Self
     where
-        I: Iterator<Item = &'a Point3<f64>>,
+        I: Iterator<Item = &'a Vector3<f64>>,
     {
         iter.fold(Self::default(), |mut acc, current| {
-            let current = current.coords;
-            acc.num += 1;
-            acc.mean += current;
-            acc.covariance += current * current.transpose();
+            acc.count += 1;
+            acc.sum += current;
+            acc.square_sum += current * current.transpose();
             acc
         })
     }

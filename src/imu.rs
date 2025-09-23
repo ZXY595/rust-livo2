@@ -17,7 +17,7 @@ pub struct State {
     gravity: Vector3<f64>,
 }
 
-fn gravity_alignment(state: &mut esikf::State) {
+fn gravity_alignment(state: &mut esikf::UncertainOdometer) {
     
 }
 
@@ -33,10 +33,10 @@ fn backward_propagation() {
 
 }
 
-fn covariance_propagation(state: &mut esikf::State) {
+fn covariance_propagation(state: &mut esikf::UncertainOdometer) {
 
 } 
 
-fn imu_attitude_propagation(state: &mut esikf::State) {
+fn imu_attitude_propagation(state: &mut esikf::UncertainOdometer) {
 
 } 
