@@ -11,7 +11,7 @@ members = ["rust-livo2-macros"]
 rust-livo2-macros = { path = "rust-livo2-macros" }
 
 [dependencies]
-fnerror = "0.1.2"
+fnerror = "0.1.4"
 futures-lite = "2.6"
 kornia = "0.1.9"
 log = "0.4"
@@ -20,6 +20,5 @@ nalgebra = "0.34"
 num-traits = "0.2"
 rust-livo2-macros.workspace = true
 thiserror = "2.0"
-# tuple_list = "0.1.3"
 
 [features]
