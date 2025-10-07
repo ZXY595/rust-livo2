@@ -1,8 +1,12 @@
-use std::{borrow::Borrow, ops::{Deref, DerefMut}};
+use std::{
+    borrow::Borrow,
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+};
 
 use nalgebra::{
     ClosedAddAssign, ClosedMulAssign, DefaultAllocator, Dim, DimAdd, DimName, DimSum, Matrix,
-    OMatrix, SMatrix, Scalar, SquareMatrix, Storage, allocator::Allocator,
+    OMatrix, SMatrix, Scalar, SquareMatrix, Storage, U0, allocator::Allocator,
 };
 use num_traits::{One, Zero};
 
@@ -117,13 +121,20 @@ pub trait UncertaintyAdd<T> {
     type Output;
 }
 
-impl<L, R> UncertaintyAdd<L> for R
+impl<L, R> UncertaintyAdd<R> for L
 where
     L: Uncertainty<Dim: DimAdd<R::Dim>>,
     R: Uncertainty<Element = L::Element>,
     DefaultAllocator: Allocator<DimSum<L::Dim, R::Dim>, DimSum<L::Dim, R::Dim>>,
 {
     type Output = OMatrix<L::Element, DimSum<L::Dim, R::Dim>, DimSum<L::Dim, R::Dim>>;
+}
+
+pub struct UncertaintyZero<T: Scalar>(PhantomData<T>);
+
+impl<T: Scalar> Uncertainty for UncertaintyZero<T> {
+    type Element = T;
+    type Dim = U0;
 }
 
 pub type Uncertainty1<T> = SMatrix<T, 1, 1>;

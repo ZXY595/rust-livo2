@@ -92,6 +92,7 @@ impl UncertainPoint<World> {
         Self::new(world_point, covariance_matrix)
     }
 
+    #[expect(unused)]
     pub fn from_body_point_without_pose_error(
         body_point: UncertainPoint<Body>,
         current_pose: &UncertainOdometer,
