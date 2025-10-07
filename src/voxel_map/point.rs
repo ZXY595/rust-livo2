@@ -1,21 +1,18 @@
 use super::Config;
 use crate::{
     esikf::UncertainOdometer,
-    frame::{Body, BodyPoint, Framed, FramedPoint, Imu, World},
-    uncertain::{UncertainForward, Uncertainty1, Uncertainty2},
+    frame::{self, Body, BodyPoint, Framed, Imu, World},
+    uncertain::{Uncertain, UncertainForward, Uncertained, Uncertainty1, Uncertainty2},
 };
 use nalgebra::{IsometryMatrix3, Matrix2, Matrix3x2, Point3, vector};
 use num_traits::Zero;
 use rust_livo2_macros::uncertainties;
-use std::ops::{Deref, DerefMut};
+use std::{borrow::Borrow, ops::Deref};
+
+type FramedPoint<F> = frame::FramedPoint<f64, F>;
 
 /// A uncertain point in F frame.
-#[derive(Debug, Clone)]
-pub struct UncertainPoint<F> {
-    /// from imu frame to world frame
-    pub point: FramedPoint<f64, F>,
-    pub covariance: BodyPointUncertainties,
-}
+pub type UncertainPoint<F> = Uncertained<FramedPoint<F>>;
 
 #[uncertainties]
 #[derive(Debug, Clone)]
@@ -24,21 +21,16 @@ pub struct BodyPointUncertainties {
     pub direction: DirectionUncertainty,
 }
 
-pub type DistanceUncertainty = Uncertainty1<f64>;
-pub type DirectionUncertainty = Uncertainty2<f64>;
+type DistanceUncertainty = Uncertainty1<f64>;
+type DirectionUncertainty = Uncertainty2<f64>;
+pub type WorldPointUncertainties = BodyPointUncertaintiesMatrix;
 
-impl<F> Deref for UncertainPoint<F> {
-    type Target = FramedPoint<f64, F>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.point
-    }
+impl Uncertain for FramedPoint<Body> {
+    type Uncertainty = BodyPointUncertainties;
 }
 
-impl<F> DerefMut for UncertainPoint<F> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.point
-    }
+impl Uncertain for FramedPoint<World> {
+    type Uncertainty = WorldPointUncertainties;
 }
 
 impl UncertainPoint<Body> {
@@ -63,18 +55,15 @@ impl UncertainPoint<Body> {
         let point_base_coords =
             range * point_direction.cross_matrix() * Matrix3x2::from_columns(&[base1, base2]);
 
-        let range_covariance = DistanceUncertainty::from_element(config.beam_err.powi(2));
+        let distance_covariance = DistanceUncertainty::from_element(config.beam_err.powi(2));
 
         let direction_covariance: DirectionUncertainty =
             Matrix2::from_diagonal_element(config.dept_err.to_radians().sin().powi(2));
 
-        let covariance_matrix = range_covariance.forward(point_direction)
+        let covariance_matrix = distance_covariance.forward(point_direction)
             + direction_covariance.forward(point_base_coords);
 
-        Self {
-            point,
-            covariance: covariance_matrix.into(),
-        }
+        Self::new(point, covariance_matrix.into())
     }
 }
 
@@ -100,10 +89,7 @@ impl UncertainPoint<World> {
             .to_imu_point(body_to_imu)
             .to_world_point(&current_odom.isometry);
 
-        Self {
-            point: world_point,
-            covariance: covariance_matrix.into(),
-        }
+        Self::new(world_point, covariance_matrix)
     }
 
     pub fn from_body_point_without_pose_error(
@@ -119,16 +105,16 @@ impl UncertainPoint<World> {
             .to_imu_point(body_to_imu)
             .to_world_point(&current_pose.isometry);
 
-        Self {
-            point: world_point,
-            covariance: covariance_matrix.into(),
-        }
+        Self::new(world_point, covariance_matrix)
     }
 }
 
-#[expect(unused)]
-impl<S> UncertainPoint<S> {
+impl<F> UncertainPoint<F>
+where
+    FramedPoint<F>: Uncertain,
+{
     pub(crate) fn point(&self) -> &Point3<f64> {
-        &self.point.inner
+        let framed: &FramedPoint<F> = self.borrow();
+        framed.deref()
     }
 }

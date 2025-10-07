@@ -1,4 +1,4 @@
-use std::borrow::Borrow;
+use std::{borrow::Borrow, ops::{Deref, DerefMut}};
 
 use nalgebra::{
     ClosedAddAssign, ClosedMulAssign, DefaultAllocator, Dim, DimAdd, DimName, DimSum, Matrix,
@@ -30,6 +30,48 @@ where
     ) -> OMatrix<Self::Element, R, R>
     where
         S: Storage<Self::Element, Self::Dim, R>;
+}
+
+pub trait Uncertain {
+    type Uncertainty: Uncertainty;
+}
+
+/// A Wrapper type for [`Uncertain`] types,
+#[derive(Debug, Clone)]
+pub struct Uncertained<U>
+where
+    U: Uncertain,
+{
+    inner: U,
+    pub covariance: U::Uncertainty,
+}
+
+impl<U> Deref for Uncertained<U>
+where
+    U: Uncertain,
+{
+    type Target = U;
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<U> DerefMut for Uncertained<U>
+where
+    U: Uncertain,
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
+}
+
+impl<U> Uncertained<U>
+where
+    U: Uncertain,
+{
+    pub fn new(inner: U, covariance: U::Uncertainty) -> Self {
+        Self { inner, covariance }
+    }
 }
 
 impl<T, D, S> Uncertainty for SquareMatrix<T, D, S>
