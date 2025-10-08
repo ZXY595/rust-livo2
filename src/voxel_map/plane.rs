@@ -1,13 +1,12 @@
 use std::borrow::Borrow;
 
-use super::Config;
 use crate::{
     frame::{World, WorldPoint},
     uncertain::{Uncertain, UncertainForward, Uncertained, Uncertainty3},
     utils::VectorSquareSum,
     voxel_map::point::UncertainPoint,
 };
-use nalgebra::{DVector, Matrix3, Matrix6, RowVector3, SymmetricEigen, Vector3, stack};
+use nalgebra::{Matrix3, Matrix6, RowVector3, SymmetricEigen, Vector3, stack};
 use rust_livo2_macros::uncertainties;
 
 pub struct Plane {
@@ -35,10 +34,7 @@ type NormalUncertainty = Uncertainty3<f64>;
 type CenterUncertainty = Uncertainty3<f64>;
 
 impl UncertainPlane {
-    pub fn new_plane(
-        plane_points: &DVector<UncertainPoint<World>>,
-        config: &Config,
-    ) -> Option<Self> {
+    pub fn new(plane_points: &[UncertainPoint<World>], planer_threshold: f64) -> Option<Self> {
         let sum = plane_points
             .iter()
             .map(UncertainPoint::point)
@@ -55,7 +51,7 @@ impl UncertainPlane {
 
         let (min_eigen_index, min_eigen_value) = eigenvalues.argmin();
 
-        if min_eigen_value < config.planer_threshold {
+        if min_eigen_value < planer_threshold {
             return None;
         }
 
@@ -90,7 +86,7 @@ impl UncertainPlane {
 
         let distance_to_origin = normal.dot(&center);
 
-        Some(Self::new(
+        Some(Self::new_uncertained(
             Plane {
                 normal: normal.into(),
                 center: center.into(),

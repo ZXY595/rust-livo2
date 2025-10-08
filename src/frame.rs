@@ -1,14 +1,19 @@
 use std::{
     marker::PhantomData,
-    ops::{Deref, DerefMut},
+    ops::{Add, Deref, DerefMut, Sub},
 };
 
 use nalgebra::{IsometryMatrix3, Point3, Scalar, SimdRealField, Vector3};
 use num_traits::Zero;
 
+#[derive(Debug)]
 pub struct World {}
+
+#[derive(Debug)]
 pub struct Imu {}
+
 /// also known as the frame where you collect point cloud
+#[derive(Debug)]
 pub struct Body {}
 
 pub type WorldPoint<T> = FramedPoint<T, World>;
@@ -17,10 +22,31 @@ pub type BodyPoint<T> = FramedPoint<T, Body>;
 
 pub type FramedPoint<T, F> = Framed<Point3<T>, F>;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Copy)]
 pub struct Framed<T, F> {
     pub inner: T,
     frame: PhantomData<F>,
+}
+
+impl<T, F> PartialEq for Framed<T, F>
+where
+    T: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.inner == other.inner
+    }
+}
+
+impl<T, F> Clone for Framed<T, F>
+where
+    T: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            frame: PhantomData,
+        }
+    }
 }
 
 impl<T, F> Deref for Framed<T, F> {
@@ -47,6 +73,9 @@ impl<T, F> Framed<T, F> {
     pub fn new_with_frame(inner: T, frame: F) -> Self {
         let _ = frame;
         Self::new(inner)
+    }
+    pub fn framed_map<U>(self, f: impl FnOnce(T) -> U) -> Framed<U, F> {
+        Framed::new(f(self.inner))
     }
 }
 
@@ -88,6 +117,7 @@ where
         }
     }
 }
+
 
 impl<T, F> FramedPoint<T, F>
 where

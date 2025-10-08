@@ -63,7 +63,7 @@ impl UncertainPoint<Body> {
         let covariance_matrix = distance_covariance.forward(point_direction)
             + direction_covariance.forward(point_base_coords);
 
-        Self::new(point, covariance_matrix.into())
+        Self::new_uncertained(point, covariance_matrix.into())
     }
 }
 
@@ -89,7 +89,7 @@ impl UncertainPoint<World> {
             .to_imu_point(body_to_imu)
             .to_world_point(&current_odom.isometry);
 
-        Self::new(world_point, covariance_matrix)
+        Self::new_uncertained(world_point, covariance_matrix)
     }
 
     #[expect(unused)]
@@ -106,7 +106,7 @@ impl UncertainPoint<World> {
             .to_imu_point(body_to_imu)
             .to_world_point(&current_pose.isometry);
 
-        Self::new(world_point, covariance_matrix)
+        Self::new_uncertained(world_point, covariance_matrix)
     }
 }
 

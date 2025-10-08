@@ -73,7 +73,7 @@ impl<U> Uncertained<U>
 where
     U: Uncertain,
 {
-    pub fn new(inner: U, covariance: U::Uncertainty) -> Self {
+    pub fn new_uncertained(inner: U, covariance: U::Uncertainty) -> Self {
         Self { inner, covariance }
     }
 }
